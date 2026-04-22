@@ -1,21 +1,31 @@
+export interface ListingFeatureFlags {
+    pool?: boolean
+    kitchen?: boolean
+}
+
+export type ListingFeatures = string[] | ListingFeatureFlags
+
 export interface ListingData {
     listing_id: string
     title: string
     price_min: number | null
-    price_max: number | null
-    price_label: string | null
-    capacity_min: number | null
-    capacity_max: number | null
-    rank_score: number
-    features: string[]
-    district: { name_ar: string }
-    category: { name_ar: string; icon_key: string }
-    provider: {
-        display_name: string
-        phone_whatsapp: string
-        verification_status: string
-        trust_score: number
-    }
+    price_max?: number | null
+    price_label?: string | null
+    capacity_min?: number | null
+    capacity_max?: number | null
+    rank_score?: number | null
+    features?: ListingFeatures | null
+    cover_url?: string | null
+    district_name?: string | null
+    district?: { name_ar?: string | null } | null
+    category?: { name_ar?: string | null; icon_key?: string | null } | null
+    provider?: {
+        display_name?: string | null
+        phone_whatsapp?: string | null
+        verification_status?: string | null
+        trust_score?: number | null
+        subscription_tier?: string | null
+    } | null
 }
 
 export interface ListingAnalyticsEvent {

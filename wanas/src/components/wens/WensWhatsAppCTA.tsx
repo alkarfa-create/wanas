@@ -1,75 +1,32 @@
-"use client";
+'use client'
 
 export default function WensWhatsAppCTA({
-    phoneE164Digits,
-    listingId,
-    listingTitle,
+  phoneE164Digits,
+  listingId,
+  listingTitle,
 }: {
-    phoneE164Digits: string; // مثل: 9665xxxxxxx بدون +
-    listingId: string;
-    listingTitle: string;
+  phoneE164Digits: string
+  listingId: string
+  listingTitle: string
 }) {
-    const msg = encodeURIComponent(
-        `السلام عليكم\nأنا عميل من منصة ونس 🌙\nرقم الطلب: WN-${listingId}\nأرغب بالاستفسار عن: ${listingTitle}\n`
-    );
+  const msg = encodeURIComponent(
+    `السلام عليكم\nأنا عميل من منصة ونس 🌙\nرقم الطلب: WN-${listingId}\nأرغب بالاستفسار عن: ${listingTitle}\n`
+  )
+  const href = `https://wa.me/${phoneE164Digits}?text=${msg}`
 
-    const href = `https://wa.me/${phoneE164Digits}?text=${msg}`;
-
-    return (
-        <div className="ctaWrap" role="contentinfo" aria-label="التواصل مع المزود">
-            <a className="ctaBtn" href={href} target="_blank" rel="noreferrer">
-                <span className="waDot" aria-hidden="true">WhatsApp</span>
-                تواصل عبر واتساب
-            </a>
-
-            <style jsx>{`
-        .ctaWrap {
-          position: sticky;
-          bottom: 0;
-          width: 100%;
-          background: #ffffff;
-          border-top: 1px solid #EBEBEB;
-          padding: 12px 16px;
-          display: flex;
-          justify-content: center;
-          z-index: 80;
-          box-shadow: 0 -4px 12px rgba(0,0,0,0.05); /* Added shadow for better separation */
-        }
-
-        .ctaBtn {
-          width: min(640px, 100%);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 10px;
-          background: #25D366;
-          color: #ffffff;
-          text-decoration: none;
-          font-weight: 900;
-          border-radius: 999px;
-          padding: 14px 16px;
-          transition: transform 0.15s ease, filter 0.15s ease;
-          box-shadow: 0 6px 16px rgba(0,0,0,0.12);
-        }
-
-        .ctaBtn:hover {
-          transform: translateY(-1px);
-          filter: brightness(0.97);
-        }
-
-        .ctaBtn:focus-visible {
-          outline: 2px solid rgba(60,36,132,0.35);
-          outline-offset: 2px;
-        }
-
-        .waDot {
-          font-weight: 800;
-          font-size: 12px;
-          background: rgba(255,255,255,0.18);
-          padding: 6px 10px;
-          border-radius: 999px;
-        }
-      `}</style>
-        </div>
-    );
+  return (
+    <div className="sticky bottom-0 w-full bg-white border-t border-gray-100 px-4 py-3 flex justify-center z-[80] shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        className="w-full max-w-[640px] flex items-center justify-center gap-2.5 bg-[#25D366] text-white font-black rounded-full px-4 py-3.5 shadow-lg hover:-translate-y-px hover:brightness-95 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#25D366]"
+      >
+        <span className="text-xs font-extrabold bg-white/20 px-2.5 py-1.5 rounded-full">
+          WhatsApp
+        </span>
+        تواصل عبر واتساب
+      </a>
+    </div>
+  )
 }

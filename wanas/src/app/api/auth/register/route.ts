@@ -3,6 +3,7 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { createHash } from 'crypto'
+import { COOKIE_OPTIONS, PROVIDER_COOKIE, signProviderToken } from '@/lib/session'
 
 function hashPassword(password: string): string {
     return createHash('sha256').update(password + (process.env.AUTH_SALT ?? 'wanas_salt')).digest('hex')
@@ -61,7 +62,10 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'خطأ في إنشاء الحساب' }, { status: 500 })
         }
 
-        return NextResponse.json({ success: true, provider })
+        const response = NextResponse.json({ success: true, provider })
+        response.cookies.set(PROVIDER_COOKIE, signProviderToken(provider.provider_id), COOKIE_OPTIONS)
+
+        return response
 
     } catch (err) {
         console.error('Register error:', err)

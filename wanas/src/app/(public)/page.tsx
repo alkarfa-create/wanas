@@ -1,82 +1,131 @@
-import { supabaseAdmin } from '@/lib/supabase'
-import Navbar from '@/components/layout/Navbar'
-import CategoryHighlight from '@/components/ui/CategoryHighlight'
-import ListingCard from '@/components/listings/ListingCard'
-import { ListingData } from '@/components/listings/types'
+import Link from "next/link"
+import { getListingsWithMedia } from "@/lib/data/listings"
+import ListingCard from "@/components/listings/ListingCard"
+import CategoryHighlight from "@/components/ui/CategoryHighlight"
+import FilterBar from "@/components/ui/FilterBar"
+import { getCategories } from "@/lib/data/categories"
 
-// تطوير دالة جلب البيانات بإضافة حماية من الأخطاء (Error Handling)
-async function getListings() {
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('listings')
-      .select(`
-        listing_id, title, price_min, price_max, price_label,
-        capacity_min, capacity_max, rank_score, features,
-        district:districts(name_ar),
-        category:service_categories(name_ar, icon_key),
-        provider:providers(display_name, phone_whatsapp, verification_status, trust_score)
-      `)
-      .eq('status', 'approved')
-      .order('rank_score', { ascending: false })
-      .limit(12)
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    category?: string
+    search?: string
+    district?: string
+    priceMin?: string
+    priceMax?: string
+    pool?: string
+    kitchen?: string
+    capacity?: string
+    sort?: string
+  }>
+}) {
+  const p = await searchParams
+  const categories = await getCategories()
+  const activeCategorySlug = p.category || null
+  const activeCatId = activeCategorySlug
+    ? categories.find((c) => c.slug === activeCategorySlug)?.id
+    : undefined
 
-    if (error) throw error
+  const hasFilters = !!(
+    p.district ||
+    p.priceMin ||
+    p.priceMax ||
+    p.pool ||
+    p.kitchen ||
+    p.capacity ||
+    p.sort ||
+    p.search
+  )
 
-    return (data ?? []) as unknown as ListingData[]
-  } catch (error) {
-    console.error("Error fetching listings:", error)
-    return [] // إرجاع مصفوفة فارغة في حال حدوث خطأ لكي لا ينهار الموقع
-  }
-}
-
-export default async function HomePage() {
-  const listings = await getListings()
+  const listings = await getListingsWithMedia({
+    categoryId: activeCatId,
+    searchQuery: p.search,
+    districtName: p.district,
+    priceMin: p.priceMin ? parseInt(p.priceMin, 10) : undefined,
+    priceMax: p.priceMax ? parseInt(p.priceMax, 10) : undefined,
+    hasPool: p.pool === "1",
+    hasKitchen: p.kitchen === "1",
+    capacityMin: p.capacity ? parseInt(p.capacity, 10) : undefined,
+    sortBy: (p.sort as "rank" | "price_min" | "views_count" | "created_at") || "rank",
+    limit: 20,
+  })
 
   return (
-    <div className="min-h-screen bg-white font-sans">
-      {/* الهيدر المطور (الذي يحتوي بداخله على الهايلايتس وشريط البحث العائم) */}
-      <Navbar />
+    <div className="min-h-screen bg-white w-full max-w-[100vw] pb-20" dir="rtl">
+      <CategoryHighlight mode="query" categories={categories} />
 
-      {/* CategoryHighlight needs to be pushed down below fixed Navbar */}
-      <div className="mt-[80px]">
-        <CategoryHighlight />
+      <div className="mt-4 mb-2">
+        <FilterBar />
       </div>
 
-      {/* تم توحيد العرض إلى max-w-[1200px] ليتطابق مع الهيدر.
-        تم إضافة pt-4 (مساحة علوية بسيطة) لأن الهايلايتس دفع المحتوى.
-      */}
-      <main className="max-w-[1200px] mx-auto px-6 pt-6 pb-16">
-
-        {/* عنوان القسم وتنسيق زر "عرض الكل" */}
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-black text-gray-900 tracking-tight">
-            بيوت وشاليهات رائجة في جدة
-          </h2>
-          <a
-            href="/jeddah/chalets"
-            className="text-sm font-bold text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-1"
-          >
-            عرض الكل <span className="text-lg leading-none mb-1">‹</span>
-          </a>
+      <section className="mt-4 mb-12 w-full max-w-7xl mx-auto">
+        <div className="flex items-center justify-between px-4 md:px-8 mb-4">
+          <div>
+            <h2 className="text-[20px] font-black text-gray-900 tracking-tight">
+              {p.search
+                ? `نتائج البحث عن: "${p.search}"`
+                : hasFilters
+                  ? "نتائج الفلترة"
+                  : activeCategorySlug
+                    ? `أفضل الـ ${categories.find((c) => c.slug === activeCategorySlug)?.label ?? ""}`
+                    : "جميع الإعلانات"}
+            </h2>
+            {listings.length > 0 && (
+              <p className="text-sm text-gray-400 font-medium">
+                {listings.length} نتيجة
+                {p.district && <span className="text-[#f63659]"> في {p.district}</span>}
+              </p>
+            )}
+          </div>
         </div>
 
-        {/* شبكة البطاقات (Grid) - معالجة الحالة الفارغة */}
         {listings.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {listings.map((listing) => (
-              <ListingCard key={listing.listing_id} listing={listing} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-2 gap-3 px-4 md:hidden">
+              {listings.map((item, index) => (
+                <div key={item.listing_id} className="w-full min-w-0">
+                  <ListingCard
+                    listing={{
+                      ...item,
+                      district: Array.isArray(item.district) ? item.district[0] : item.district,
+                      category: Array.isArray(item.category) ? item.category[0] : item.category,
+                      provider: Array.isArray(item.provider) ? item.provider[0] : item.provider,
+                    }}
+                    position={index}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 px-8">
+              {listings.map((item, index) => (
+                <ListingCard
+                  key={item.listing_id}
+                  listing={{
+                    ...item,
+                    district: Array.isArray(item.district) ? item.district[0] : item.district,
+                    category: Array.isArray(item.category) ? item.category[0] : item.category,
+                    provider: Array.isArray(item.provider) ? item.provider[0] : item.provider,
+                  }}
+                  position={index}
+                />
+              ))}
+            </div>
+          </>
         ) : (
-          // واجهة احترافية تظهر في حال لم توجد إعلانات بدلاً من شاشة بيضاء
-          <div className="flex flex-col items-center justify-center py-20 text-center bg-gray-50 rounded-2xl border border-gray-100">
-            <div className="text-4xl mb-4 opacity-50">🏡</div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">لا توجد إعلانات حالياً</h3>
-            <p className="text-gray-500 text-sm">جرب البحث في وقت لاحق أو تصفح أقسام أخرى.</p>
+          <div className="w-full py-20 flex flex-col items-center justify-center text-center px-4">
+            <div className="text-6xl mb-4">🔍</div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">لم نجد نتائج</h3>
+            <p className="text-gray-500 max-w-xs mx-auto">
+              جرب تغيير الفلاتر أو توسيع نطاق البحث
+            </p>
+            <Link href="/" className="mt-6 text-[#f63659] font-bold hover:underline">
+              عرض كل الإعلانات
+            </Link>
           </div>
         )}
-
-      </main>
+      </section>
     </div>
   )
 }

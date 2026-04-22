@@ -23,6 +23,9 @@ export default function ListingsGrid({
         )
     }
 
+    // Debugging: Check if cover_url exists in listings
+    console.log('ListingsGrid data:', listings.map((l) => ({ id: l.listing_id, cover_url: l.cover_url })))
+
     if (variant === 'list') {
         return (
             <div className="flex flex-col gap-3">
@@ -32,7 +35,7 @@ export default function ListingsGrid({
     }
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-2 lg:grid-cols-3">
             {listings.map((l) => <ListingCard key={l.listing_id} listing={l} />)}
         </div>
     )

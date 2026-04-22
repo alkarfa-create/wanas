@@ -1,4 +1,4 @@
-export type ListingStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'suspended'
+export type ListingStatus = 'draft' | 'pending_review' | 'approved' | 'rejected' | 'paused'
 export type VerificationStatus = 'unverified' | 'verified' | 'rejected'
 export type ProviderStatus = 'active' | 'suspended' | 'deleted'
 export type Channel = 'google_ads' | 'organic' | 'direct' | 'social' | 'referral'

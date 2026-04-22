@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { useState } from 'react'
 
 const DISTRICTS = [
     { id: 1, slug: 'al-zahrah', name: 'الزهراء' },
@@ -31,10 +32,12 @@ export default function FilterBar() {
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
+    const [copied, setCopied] = useState(false)
 
     const activeDistrict = searchParams.get('district') ?? ''
     const activePrice = searchParams.get('price') ?? ''
     const activeCap = searchParams.get('capacity') ?? ''
+    const hasFilters = !!(activeDistrict || activePrice || activeCap)
 
     function setFilter(key: string, value: string) {
         const params = new URLSearchParams(searchParams.toString())
@@ -50,7 +53,22 @@ export default function FilterBar() {
         router.push(pathname)
     }
 
-    const hasFilters = activeDistrict || activePrice || activeCap
+    async function shareFilters() {
+        const url = `${window.location.origin}${pathname}?${searchParams.toString()}`
+        try {
+            if (navigator.share) {
+                await navigator.share({ title: 'ونس — نتائج البحث', url })
+            } else {
+                await navigator.clipboard.writeText(url)
+                setCopied(true)
+                setTimeout(() => setCopied(false), 2000)
+            }
+        } catch {
+            await navigator.clipboard.writeText(url)
+            setCopied(true)
+            setTimeout(() => setCopied(false), 2000)
+        }
+    }
 
     return (
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-6">
@@ -60,15 +78,11 @@ export default function FilterBar() {
                 <p className="text-xs font-bold text-gray-400 mb-2 tracking-wide">الحي</p>
                 <div className="flex gap-2 flex-wrap">
                     {DISTRICTS.map((d) => (
-                        <button
-                            key={d.slug}
-                            onClick={() => setFilter('district', d.slug)}
+                        <button key={d.slug} onClick={() => setFilter('district', d.slug)}
                             style={activeDistrict === d.slug
                                 ? { backgroundColor: '#4C2494', color: 'white' }
-                                : { backgroundColor: '#f5f3ff', color: '#4C2494' }
-                            }
-                            className="text-xs font-bold px-3 py-1.5 rounded-full transition-all"
-                        >
+                                : { backgroundColor: '#f5f3ff', color: '#4C2494' }}
+                            className="text-xs font-bold px-3 py-1.5 rounded-full transition-all">
                             {d.name}
                         </button>
                     ))}
@@ -80,15 +94,11 @@ export default function FilterBar() {
                 <p className="text-xs font-bold text-gray-400 mb-2 tracking-wide">السعر (ريال)</p>
                 <div className="flex gap-2 flex-wrap">
                     {PRICES.map((p) => (
-                        <button
-                            key={p.value}
-                            onClick={() => setFilter('price', p.value)}
+                        <button key={p.value} onClick={() => setFilter('price', p.value)}
                             style={activePrice === p.value
                                 ? { backgroundColor: '#FC9C4B', color: 'white' }
-                                : { backgroundColor: '#fff7ed', color: '#FC9C4B' }
-                            }
-                            className="text-xs font-bold px-3 py-1.5 rounded-full transition-all"
-                        >
+                                : { backgroundColor: '#fff7ed', color: '#FC9C4B' }}
+                            className="text-xs font-bold px-3 py-1.5 rounded-full transition-all">
                             {p.label}
                         </button>
                     ))}
@@ -100,29 +110,47 @@ export default function FilterBar() {
                 <p className="text-xs font-bold text-gray-400 mb-2 tracking-wide">السعة</p>
                 <div className="flex gap-2 flex-wrap">
                     {CAPACITIES.map((c) => (
-                        <button
-                            key={c.value}
-                            onClick={() => setFilter('capacity', c.value)}
+                        <button key={c.value} onClick={() => setFilter('capacity', c.value)}
                             style={activeCap === c.value
                                 ? { backgroundColor: '#2FBF71', color: 'white' }
-                                : { backgroundColor: '#f0fdf4', color: '#2FBF71' }
-                            }
-                            className="text-xs font-bold px-3 py-1.5 rounded-full transition-all"
-                        >
+                                : { backgroundColor: '#f0fdf4', color: '#2FBF71' }}
+                            className="text-xs font-bold px-3 py-1.5 rounded-full transition-all">
                             {c.label}
                         </button>
                     ))}
                 </div>
             </div>
 
-            {/* Clear */}
+            {/* Footer: مسح + مشاركة */}
             {hasFilters && (
-                <button
-                    onClick={clearAll}
-                    className="text-xs text-red-400 font-bold hover:text-red-600 transition-colors"
-                >
-                    ✕ مسح الفلاتر
-                </button>
+                <div className="flex items-center justify-between pt-3 border-t border-gray-50 mt-1">
+                    <button onClick={clearAll}
+                        className="text-xs text-red-400 font-bold hover:text-red-600 transition-colors">
+                        ✕ مسح الفلاتر
+                    </button>
+
+                    <button onClick={shareFilters}
+                        className="flex items-center gap-1.5 text-xs font-black px-3 py-1.5 rounded-full transition-all"
+                        style={copied
+                            ? { backgroundColor: '#f0fdf4', color: '#2FBF71' }
+                            : { backgroundColor: '#f5f3ff', color: '#4C2494' }}>
+                        {copied ? (
+                            <>
+                                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current stroke-2 fill-none">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                                تم النسخ!
+                            </>
+                        ) : (
+                            <>
+                                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-current stroke-2 fill-none">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 1 1 0-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 1 0 0-2.684m0 2.684L8.684 10.658" />
+                                </svg>
+                                مشاركة البحث
+                            </>
+                        )}
+                    </button>
+                </div>
             )}
         </div>
     )

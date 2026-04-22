@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Menu } from 'lucide-react'
-import { getAuth, clearAuth } from '@/lib/auth'
+import { clearAuth } from '@/lib/auth'
 import type { AuthProvider } from '@/lib/auth'
 
 export default function AuthButton() {
@@ -15,26 +15,54 @@ export default function AuthButton() {
     const [ready, setReady] = useState(false)
 
     useEffect(() => {
-        setAuth(getAuth())
-        setReady(true)
+        let mounted = true
 
-        function onStorage() {
-            setAuth(getAuth())
+        async function loadSession() {
+            try {
+                const response = await fetch('/api/auth/me', { cache: 'no-store' })
+                if (!mounted) return
+
+                if (!response.ok) {
+                    setAuth(null)
+                } else {
+                    const data = await response.json()
+                    setAuth(data.provider ?? null)
+                }
+            } catch {
+                if (mounted) setAuth(null)
+            } finally {
+                if (mounted) setReady(true)
+            }
         }
 
-        window.addEventListener('storage', onStorage)
-        window.addEventListener('auth-change', onStorage)
+        function refreshSession() {
+            void loadSession()
+        }
+
+        void loadSession()
+        window.addEventListener('storage', refreshSession)
+        window.addEventListener('auth-change', refreshSession)
+        window.addEventListener('focus', refreshSession)
 
         return () => {
-            window.removeEventListener('storage', onStorage)
-            window.removeEventListener('auth-change', onStorage)
+            mounted = false
+            window.removeEventListener('storage', refreshSession)
+            window.removeEventListener('auth-change', refreshSession)
+            window.removeEventListener('focus', refreshSession)
         }
     }, [])
 
-    function handleLogout() {
+    async function handleLogout() {
+        try {
+            await fetch('/api/auth/logout', { method: 'POST' })
+        } catch {
+            // Best effort; client cache is still cleared below.
+        }
+
         clearAuth()
         setAuth(null)
         setMenuOpen(false)
+        window.dispatchEvent(new Event('auth-change'))
         router.push('/')
         router.refresh()
     }

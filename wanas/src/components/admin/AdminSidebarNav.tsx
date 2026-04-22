@@ -9,6 +9,7 @@ const BRAND = '#f63659'
 const NAV = [
   { href: '/admin',          label: 'الرئيسية',    icon: '📊', exact: true },
   { href: '/admin/listings', label: 'الإعلانات',   icon: '📋' },
+  { href: '/admin/banners',  label: 'البانرات',    icon: '🖼️' },
   { href: '/admin/providers',label: 'المزودون',    icon: '👥' },
 ]
 

@@ -2,12 +2,11 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Search, Heart, Briefcase, User } from 'lucide-react'
+import { Home, PlusCircle, User } from 'lucide-react'
 
 const NAV_ITEMS = [
     { label: 'الرئيسية', icon: Home, href: '/' },
-    { label: 'استكشف', icon: Search, href: '/explore' },
-    { label: 'المفضلة', icon: Heart, href: '/favorites' },
+    { label: 'أضف إعلان', icon: PlusCircle, href: '/add-listing' },
     { label: 'حسابي', icon: User, href: '/profile' },
 ]
 

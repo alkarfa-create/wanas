@@ -1,12 +1,9 @@
 import type { Metadata } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
-import BookingWidget from '@/components/listings/BookingWidget'
 import ViewTracker from '@/components/listings/ViewTracker'
-import ReviewSection from '@/components/listings/ReviewSection'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
-import { Heart, Share2, MapPin } from 'lucide-react'
-import ListingMap from '@/components/listings/ListingMap'
+import { Share2, MapPin } from 'lucide-react'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -147,19 +144,6 @@ export default async function ListingPage({ params }: PageProps) {
 
   if (!listing) notFound()
 
-  // جلب التقييمات
-  const { data: reviews } = await supabaseAdmin
-    .from('reviews')
-    .select('rating, would_repeat, created_at, reasons, notes')
-    .eq('listing_id', id)
-    .order('created_at', { ascending: false })
-    .limit(10)
-
-  const reviewCount = reviews?.length ?? 0
-  const avgRating = reviewCount > 0
-    ? (reviews!.reduce((s, r) => s + r.rating, 0) / reviewCount).toFixed(1)
-    : null
-
   // تحويل البيانات
   const media = Array.isArray((listing as any).media)
     ? [...(listing as any).media].sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
@@ -172,6 +156,11 @@ export default async function ListingPage({ params }: PageProps) {
   const provider = Array.isArray(listing.provider) ? listing.provider[0] : listing.provider
   const district = Array.isArray(listing.district) ? listing.district[0] : listing.district
   const districtName = (listing as any).district_name || (district as any)?.name_ar || 'جدة'
+  const providerPhone =
+    typeof (provider as any)?.phone_whatsapp === 'string'
+      ? (provider as any).phone_whatsapp.replace(/\D/g, '')
+      : null
+  const whatsappHref = providerPhone ? `https://wa.me/${providerPhone}` : null
 
   // ✅ features هي مصفوفة نصوص ["مسبح صغير", "مطبخ", ...]
   const features: string[] = Array.isArray(listing.features) ? listing.features as string[] : []
@@ -202,18 +191,6 @@ export default async function ListingPage({ params }: PageProps) {
     f => !recognizedKeywords.some(k => f.toLowerCase().includes(k.toLowerCase()))
   )
 
-  const widgetProps = {
-    listingId: listing.listing_id,
-    listingTitle: listing.title,
-    providerId: listing.provider_id,
-    categoryId: listing.category_id,
-    districtId: listing.district_id,
-    price: listing.price_min,
-    rating: avgRating ? parseFloat(avgRating) : 0,
-    providerPhone: (provider as any)?.phone_whatsapp ?? null,
-    isPro: (provider as any)?.subscription_tier === 'pro',
-  }
-
   return (
     <div className="min-h-screen bg-white text-[#222] antialiased pb-32 lg:pb-0" dir="rtl">
       <ViewTracker listingId={listing.listing_id} />
@@ -231,11 +208,6 @@ export default async function ListingPage({ params }: PageProps) {
             ) : (
               <div className="w-full h-full flex items-center justify-center text-6xl">🏡</div>
             )}
-            <div className="absolute top-4 right-4 z-10">
-              <button className="p-3 bg-white/90 backdrop-blur-sm rounded-full shadow-lg">
-                <Heart size={20} className="text-gray-700" />
-              </button>
-            </div>
             <div className="absolute top-4 left-4 z-10">
               <button className="p-3 bg-white/90 backdrop-blur-sm rounded-full shadow-lg">
                 <Share2 size={20} className="text-gray-700" />
@@ -258,19 +230,9 @@ export default async function ListingPage({ params }: PageProps) {
           <div>
             <div className="flex items-start justify-between gap-4 mb-2">
               <h1 className="text-2xl font-black text-gray-900 leading-tight">{listing.title}</h1>
-              {avgRating ? (
-                <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-xl shrink-0">
-                  <svg viewBox="0 0 24 24" className="w-4 h-4 fill-amber-400">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                  </svg>
-                  <span className="text-sm font-black text-amber-700">{avgRating}</span>
-                  <span className="text-xs text-amber-500 font-bold">({reviewCount})</span>
-                </div>
-              ) : (
-                <div className="bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl shrink-0">
-                  <span className="text-xs font-black text-blue-600">✨ جديد</span>
-                </div>
-              )}
+              <div className="bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl shrink-0">
+                <span className="text-xs font-black text-blue-600">منصة ونَس</span>
+              </div>
             </div>
             <div className="flex items-center gap-1.5 text-gray-500">
               <MapPin size={14} className="text-gray-400" />
@@ -466,63 +428,50 @@ export default async function ListingPage({ params }: PageProps) {
             </div>
           )}
 
-          {/* قسم التقييم */}
-          <ReviewSection listingId={listing.listing_id} />
-
-          {/* التقييمات */}
-          {reviews && reviews.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base font-black text-gray-900">التقييمات</h2>
-                <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-xl">
-                  <svg viewBox="0 0 24 24" className="w-4 h-4 fill-amber-400">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                  </svg>
-                  <span className="text-sm font-black text-amber-700">{avgRating}</span>
-                  <span className="text-xs text-amber-500 font-bold">({reviewCount} تقييم)</span>
-                </div>
-              </div>
-              <div className="flex flex-col gap-3">
-                {reviews.map((r, i) => (
-                  <div key={i} className="border border-gray-100 rounded-2xl p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex gap-0.5">
-                        {[1, 2, 3, 4, 5].map(s => (
-                          <svg key={s} viewBox="0 0 24 24" className={`w-4 h-4 ${s <= r.rating ? 'fill-amber-400' : 'fill-gray-200'}`}>
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                          </svg>
-                        ))}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {r.would_repeat && (
-                          <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">👍 سيعود</span>
-                        )}
-                        <span className="text-[10px] text-gray-300 font-bold">
-                          {new Date(r.created_at).toLocaleDateString('ar-SA', { month: 'short', year: 'numeric' })}
-                        </span>
-                      </div>
-                    </div>
-                    {r.notes && (
-                      <p className="text-sm text-gray-600 font-medium mt-2 leading-relaxed">"{r.notes}"</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
         </div>{/* end lg:col-span-8 */}
 
         {/* Desktop Sidebar */}
         <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-[110px]">
-          <BookingWidget {...widgetProps} variant="desktop" />
+          <div className="rounded-3xl border border-gray-100 bg-white p-5 shadow-sm">
+            <h2 className="text-base font-black text-gray-900 mb-2">التواصل مع المزود</h2>
+            <p className="text-sm text-gray-500 font-medium mb-4">
+              هذه الصفحة للعرض والاكتشاف في Launch 1. التواصل يتم مباشرة مع المزود.
+            </p>
+            {whatsappHref ? (
+              <a
+                href={whatsappHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-center rounded-2xl bg-[#25D366] text-white font-black py-3"
+              >
+                تواصل عبر واتساب
+              </a>
+            ) : (
+              <div className="w-full rounded-2xl bg-gray-100 text-gray-500 text-center py-3 font-bold">
+                رقم واتساب غير متوفر حالياً
+              </div>
+            )}
+          </div>
         </div>
 
       </main>
 
       {/* Mobile Bottom Bar */}
       <div className="fixed bottom-0 left-0 w-full z-[9999] bg-white border-t border-gray-200 p-4 lg:hidden">
-        <BookingWidget {...widgetProps} variant="mobile" />
+        {whatsappHref ? (
+          <a
+            href={whatsappHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full inline-flex items-center justify-center rounded-2xl bg-[#25D366] text-white font-black py-3"
+          >
+            تواصل عبر واتساب
+          </a>
+        ) : (
+          <div className="w-full rounded-2xl bg-gray-100 text-gray-500 text-center py-3 font-bold">
+            رقم واتساب غير متوفر حالياً
+          </div>
+        )}
       </div>
     </div>
   )

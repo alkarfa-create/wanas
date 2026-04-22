@@ -96,13 +96,16 @@ export default function ListingForm({ initialData, isEditing = false }: ListingF
         });
     };
 
-    // TODO(security-migration): move listings insert/update mutations to server actions.
-    // Current client-side supabase mutations remain until server action endpoints are wired.
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
 
         try {
+            const listingId = initialData?.listing_id;
+            if (isEditing && !listingId) {
+                throw new Error("معرّف الإعلان غير متوفر للتعديل");
+            }
+
             const safeStatus = ALLOWED_LISTING_STATUSES.has(formData.status) ? formData.status : "pending_review";
             const listingPayload = {
                 title: formData.title,
@@ -118,43 +121,26 @@ export default function ListingForm({ initialData, isEditing = false }: ListingF
                 status: safeStatus
             };
 
-            let listingId = initialData?.listing_id;
+            const media_urls = previews.filter((url) => /^https?:\/\//i.test(url));
+            const endpoint = isEditing ? `/api/admin/listings/${listingId}` : "/api/admin/listings";
+            const method = isEditing ? "PATCH" : "POST";
 
-            if (isEditing) {
-                const { error } = await supabaseBrowser
-                    .from("listings")
-                    .update(listingPayload)
-                    .eq("listing_id", listingId);
-                if (error) throw error;
-            } else {
-                const { data, error } = await supabaseBrowser
-                    .from("listings")
-                    .insert([listingPayload])
-                    .select()
-                    .single();
-                if (error) throw error;
-                listingId = data.listing_id;
-            }
+            const response = await fetch(endpoint, {
+                method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    ...listingPayload,
+                    media_urls,
+                }),
+            });
 
-            // Media Handling (Simulated/Basic)
-            if (!isEditing || images.length > 0) {
-                const mediaToAdd = previews
-                    .filter(url => url.startsWith('http'))
-                    .map((url, i) => ({
-                        listing_id: listingId,
-                        url: url,
-                        sort_order: i
-                    }));
-
-                // If editing, we'd normally sync images (delete old, add new)
-                // For simplicity here, we add any new ones
-                if (mediaToAdd.length > 0) {
-                    await supabaseBrowser.from("listing_media").delete().eq("listing_id", listingId);
-                    await supabaseBrowser.from("listing_media").insert(mediaToAdd);
-                }
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(result.error || "فشل حفظ الإعلان");
             }
 
             router.push("/admin/listings");
+            router.refresh();
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : "Unknown error";
             console.error("Error saving listing:", error);
@@ -181,9 +167,16 @@ export default function ListingForm({ initialData, isEditing = false }: ListingF
                             required
                             value={formData.provider_id}
                             onChange={e => setFormData({ ...formData, provider_id: e.target.value })}
-                            className="w-full px-5 py-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white focus:border-rose-500 transition-all outline-none font-medium placeholder:text-gray-400"
+                            readOnly={isEditing}
+                            disabled={isEditing}
+                            className="w-full px-5 py-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white focus:border-rose-500 transition-all outline-none font-medium placeholder:text-gray-400 disabled:cursor-not-allowed disabled:opacity-70"
                             placeholder="أدخل provider_id"
                         />
+                        {isEditing && (
+                            <p className="mt-2 text-xs font-bold text-gray-400">
+                                لا يمكن تعديل معرّف المزود من لوحة التعديل.
+                            </p>
+                        )}
                     </div>
 
                     <div>

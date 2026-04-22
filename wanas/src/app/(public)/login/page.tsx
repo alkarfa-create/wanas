@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { setAuth } from '@/lib/auth'
 
 const BRAND = '#f63659'
 
@@ -39,11 +38,12 @@ export default function LoginPage() {
             })
             const data = await res.json()
             if (!res.ok) { setErrors({ submit: data.error }); return }
-            setAuth(data.provider)
             const dest = redirect === '/profile'
                 ? `/profile/${data.provider.provider_id}`
                 : redirect
+            window.dispatchEvent(new Event('auth-change'))
             router.push(dest)
+            router.refresh()
         } catch {
             setErrors({ submit: 'تعذر الاتصال بالسيرفر' })
         } finally {
@@ -76,11 +76,12 @@ export default function LoginPage() {
             })
             const data = await res.json()
             if (!res.ok) { setErrors({ submit: data.error }); return }
-            setAuth(data.provider)
             const dest = redirect === '/profile'
                 ? `/profile/${data.provider.provider_id}`
                 : redirect
+            window.dispatchEvent(new Event('auth-change'))
             router.push(dest)
+            router.refresh()
         } catch {
             setErrors({ submit: 'تعذر الاتصال بالسيرفر' })
         } finally {

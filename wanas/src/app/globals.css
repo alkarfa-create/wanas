@@ -1,7 +1,13 @@
 @import "tailwindcss";
 
+@theme {
+  --font-cairo: "Tajawal", "Cairo", "Alexandria", "Noto Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
+  --font-alexandria: "Alexandria", "Tajawal", "Cairo", "Noto Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
+  --font-tajawal: "Tajawal", "Cairo", "Alexandria", "Noto Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
+}
+
 body {
-  font-family: 'Cairo', sans-serif;
+  font-family: var(--font-cairo), 'Cairo', sans-serif;
   background: #ffffff;
   color: #222222;
   direction: rtl;
@@ -14,4 +20,57 @@ body {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* =========================
+   RTL / LTR Navbar Control
+   ========================= */
+
+.navbar {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  border-bottom: 1px solid #ebebeb;
+  height: 80px;
+  z-index: 100;
+}
+
+.navbarRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 100%;
+  max-width: 1760px;
+  margin: 0 auto;
+  padding: 0 24px;
+  gap: 16px;
+}
+
+/* Arabic */
+html[dir="rtl"] .navbarRow {
+  flex-direction: row;
+}
+
+/* English */
+html[dir="ltr"] .navbarRow {
+  flex-direction: row;
+}
+
+.navLogo {
+  min-width: 140px;
+  display: flex;
+  align-items: center;
+}
+
+.navSearch {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.navActions {
+  min-width: 180px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }

@@ -1,36 +1,133 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ونس — Wanas
 
-## Getting Started
+> منصة سوق المناسبات والخدمات المرتبطة بها
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## ما هي ونس؟
+
+ونس منصة **Marketplace** متخصصة في ربط العملاء بمزودي خدمات المناسبات — من شاليهات وقاعات وضيافة وبوفيهات وتنسيق حفلات وتأجير معدات وغيرها.
+
+الهدف ليس بناء دليل إعلانات، بل **سوق رقمي ذكي** يخدم ثلاثة أطراف:
+
+| الطرف | ما يحصل عليه |
+|---|---|
+| **العميل** | اكتشاف سريع، مقارنة سهلة، ثقة بالمزود |
+| **المزود** | وصول أوسع، أدوات قياس الأداء، باقات ترقية |
+| **الإدارة** | مراقبة السوق، اكتشاف الفجوات، قرارات مبنية على بيانات |
+
+---
+
+## البنية التقنية
+
+```
+Next.js + React + Tailwind CSS
+Supabase (Auth + Database + Storage)
+PostgreSQL
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### طبقات النظام
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+Presentation Layer   →  واجهات العميل والمزود والإدارة
+Business Logic Layer →  التحقق من البيانات، دورة حياة الإعلان، الصلاحيات
+Data Layer           →  الإعلانات، الصور، المزودون، التقييمات، الطلبات
+Intelligence Layer   →  الأحداث التحليلية، قياس التحويل، لوحة الإدارة
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### الكيانات الرئيسية في قاعدة البيانات
 
-## Learn More
+- `listings` — الإعلانات
+- `listing_media` — صور الإعلانات
+- `providers` — بيانات المزودين
+- `service_categories` — الفئات
+- `districts` — الأحياء والمناطق
+- `events / page_views / clicks / requests` — طبقة التحليلات
+- `reviews` — التقييمات
+- `moderation_entities` — سجل المراجعة الإدارية
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## دورة حياة الإعلان
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+Draft → Pending Review → Approved → Published
+                      ↘ Rejected
+Published → Archived | Featured | Expired
+```
 
-## Deploy on Vercel
+الانتقال بين الحالات يُدار برمجيًا وفق قواعد صريحة — لا يُسمح بالتجاوز خارج المسار المحدد.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## معايير التطوير
+
+### Validation
+- **Zod** هو معيار الـ validation الافتراضي لكل العمل الجديد
+- يشمل: form schemas, server-side validation, API payloads, analytics payloads
+- لا يُسمح بإدخال مكتبة validation ثانية في الـ flows الحساسة بدون موافقة صريحة
+
+### Analytics
+- الأحداث التحليلية لا تعيق request المستخدم الأساسي
+- payload ناقص = violation يُسجَّل، ليس فشل للمستخدم
+- الأحداث الحساسة موثقة في `docs/analytics-events.md`
+
+### Authorization
+- لا يُصدر كود في الـ flows الحساسة بدون review
+- الـ flows الحساسة: auth, RLS, storage policies, schema, listing lifecycle, payments
+- الاختبارات تشمل IDOR وcross-entity privilege escalation
+
+### Performance
+- LCP وINP وCLS مُتتبَّعة على الصفحات الرئيسية
+- "time to visible contact action" مقياس تجاري أساسي على صفحات الإعلانات
+- الصور محسَّنة، lazy loading مطلوب above the fold
+
+---
+
+## الصفحات الرئيسية
+
+| الصفحة | الأولوية |
+|---|---|
+| الصفحة الرئيسية | عالية جداً |
+| صفحة الفئة | عالية |
+| صفحة الحي / الموقع | عالية |
+| صفحة تفاصيل الإعلان | عالية جداً |
+| نموذج إضافة إعلان | عالية (للمزود) |
+| لوحة الإدارة | حرجة |
+
+---
+
+## الوثائق المرجعية
+
+| الملف | المحتوى |
+|---|---|
+| `CLAUDE.md` | تعليمات العمل البرمجي، السياق التقني، القيود |
+| `docs/authz-matrix.md` | مصفوفة الصلاحيات لكل دور |
+| `docs/database-schema.md` | Schema قاعدة البيانات |
+| `docs/business-rules.md` | قواعد العمل ودورة حياة الإعلان |
+| `docs/analytics-events.md` | taxonomy الأحداث التحليلية وخصائصها |
+| `docs/listing-lifecycle.md` — | حالات الإعلان وقواعد الانتقال |
+| `docs/release-checklist.md` | قائمة مراجعة الإصدار |
+| `HARDENING_PLAN.md` | خطة تصليب المنصة — 90 يوم |
+
+---
+
+## نموذج العمل
+
+مصادر الدخل:
+- الإعلانات المميزة والمواضع المدفوعة
+- الباقات الاحترافية للمزودين (Pro)
+- الاشتراكات والتحليلات المتقدمة
+- الشارات والبنرات الترويجية
+
+---
+
+## مبادئ التشغيل
+
+> المدير لا يدير موقعًا فقط، بل يدير سوقًا حيًا.
+
+- **السرعة:** العميل يجد ما يريد بسرعة
+- **الوضوح:** تفاصيل الخدمة واضحة ومقنعة
+- **الثقة:** عوامل طمأنة داعمة لقرار العميل
+- **القياس:** كل تفاعل مهم قابل للرصد
+- **التوسع:** البنية تستوعب فئات وأسواق جديدة
