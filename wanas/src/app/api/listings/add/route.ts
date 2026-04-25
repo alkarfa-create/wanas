@@ -55,6 +55,16 @@ async function convertToWebP(file: File): Promise<Buffer | null> {
   } catch { return null }
 }
 
+async function removeStoragePaths(paths: string[]) {
+  const uniquePaths = [...new Set(paths.map((path) => path.trim()).filter(Boolean))]
+  if (uniquePaths.length === 0) return
+
+  const { error } = await supabaseAdmin.storage.from(BUCKET).remove(uniquePaths)
+  if (error) {
+    console.error('listing add cleanup storage remove error:', error)
+  }
+}
+
 async function uploadImage(file: File, listing_id: string, index: number) {
   if (!ALLOWED_TYPES.includes(file.type)) return { error: `صيغة الصورة ${index + 1} غير مقبولة` }
   if (file.size > MAX_FILE_SIZE) return { error: `الصورة ${index + 1} تتجاوز 10MB` }
@@ -69,10 +79,10 @@ async function uploadImage(file: File, listing_id: string, index: number) {
     .from(BUCKET)
     .upload(path, buffer, { contentType, cacheControl: '31536000', upsert: false })
 
-  if (uploadError) return { error: `فشل رفع الصورة ${index + 1}: ${uploadError.message}` }
+  if (uploadError) return { error: `فشل رفع الصورة ${index + 1}` }
 
   const { data: pub } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(path)
-  return { url: pub.publicUrl }
+  return { url: pub.publicUrl, path }
 }
 
 export async function POST(request: NextRequest) {
@@ -217,7 +227,7 @@ export async function POST(request: NextRequest) {
     if (listingError || !listing) {
       console.error('LISTING INSERT ERROR:', JSON.stringify(listingError))
       return NextResponse.json(
-        { success: false, error: listingError?.message || 'خطأ في حفظ الإعلان' },
+        { success: false, error: 'خطأ في حفظ الإعلان' },
         { status: 500 }
       )
     }
@@ -231,6 +241,10 @@ export async function POST(request: NextRequest) {
 
     const failures = uploadResults.filter(r => 'error' in r)
     if (failures.length > 0) {
+      const uploadedPaths = uploadResults
+        .filter((result): result is { url: string; path: string } => 'path' in result)
+        .map((result) => result.path)
+      await removeStoragePaths(uploadedPaths)
       await supabaseAdmin.from('listings').delete().eq('listing_id', listing_id)
       return NextResponse.json(
         { success: false, error: 'error' in failures[0] ? failures[0].error : 'فشل رفع الصور' },
@@ -238,14 +252,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const validUploads = uploadResults as { url: string }[]
+    const validUploads = uploadResults as { url: string; path: string }[]
     const coverUrl = validUploads[cover_index]?.url || validUploads[0]?.url
 
     // ── تحديث cover_url ───────────────────────────────────────
-    await supabaseAdmin
+    const { error: coverUpdateError } = await supabaseAdmin
       .from('listings')
       .update({ cover_url: coverUrl })
       .eq('listing_id', listing_id)
+
+    if (coverUpdateError) {
+      console.error('LISTING COVER UPDATE ERROR:', coverUpdateError)
+      await removeStoragePaths(validUploads.map((upload) => upload.path))
+      await supabaseAdmin.from('listings').delete().eq('listing_id', listing_id)
+      return NextResponse.json(
+        { success: false, error: 'تعذر حفظ صور الإعلان' },
+        { status: 500 }
+      )
+    }
 
     // ── حفظ الصور في listing_media ────────────────────────────
     const mediaRows = validUploads.map((r, i) => ({
@@ -256,7 +280,15 @@ export async function POST(request: NextRequest) {
     }))
 
     const { error: mediaError } = await supabaseAdmin.from('listing_media').insert(mediaRows)
-    if (mediaError) console.error('Media insert error:', mediaError.message)
+    if (mediaError) {
+      console.error('Media insert error:', mediaError.message)
+      await removeStoragePaths(validUploads.map((upload) => upload.path))
+      await supabaseAdmin.from('listings').delete().eq('listing_id', listing_id)
+      return NextResponse.json(
+        { success: false, error: 'تعذر حفظ صور الإعلان' },
+        { status: 500 }
+      )
+    }
 
     const ref = `WN-${Math.floor(1000 + Math.random() * 9000)}`
 

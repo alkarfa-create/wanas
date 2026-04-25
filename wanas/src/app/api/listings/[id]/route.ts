@@ -8,6 +8,9 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const MAX_IMAGES = 8
 const BUCKET = 'chalets-images'
+const STORAGE_PUBLIC_PREFIX = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${BUCKET}/`
+  : null
 
 function parseBooleanField(value: FormDataEntryValue | null) {
   return typeof value === 'string' && value === 'true'
@@ -45,6 +48,28 @@ function getErrorMessage(caught: unknown): string {
     return serialized && serialized !== '{}' ? serialized : 'Unknown error occurred'
   } catch {
     return 'Unknown error occurred'
+  }
+}
+
+function getStoragePathFromPublicUrl(url: string): string | null {
+  const normalized = url.trim()
+  if (!normalized) return null
+  if (STORAGE_PUBLIC_PREFIX && normalized.startsWith(STORAGE_PUBLIC_PREFIX)) {
+    return normalized.slice(STORAGE_PUBLIC_PREFIX.length)
+  }
+  if (normalized.startsWith('listings/')) {
+    return normalized
+  }
+  return null
+}
+
+async function removeStoragePaths(paths: string[]) {
+  const uniquePaths = [...new Set(paths.map((path) => path.trim()).filter(Boolean))]
+  if (uniquePaths.length === 0) return
+
+  const { error } = await supabaseAdmin.storage.from(BUCKET).remove(uniquePaths)
+  if (error) {
+    console.error('listing media cleanup storage remove error:', error)
   }
 }
 
@@ -92,11 +117,11 @@ async function uploadImage(file: File, listingId: string, index: number) {
     })
 
   if (uploadError) {
-    return { error: `فشل رفع الصورة ${index + 1}: ${uploadError.message}` }
+    return { error: `فشل رفع الصورة ${index + 1}` }
   }
 
   const { data: pub } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(path)
-  return { url: pub.publicUrl }
+  return { url: pub.publicUrl, path }
 }
 
 export async function PUT(
@@ -324,6 +349,15 @@ export async function PUT(
       )
     }
 
+    const { data: currentMediaRows } = await supabaseAdmin
+      .from('listing_media')
+      .select('url')
+      .eq('listing_id', listingId)
+
+    const currentMediaUrls = (currentMediaRows ?? [])
+      .map((row) => row.url)
+      .filter((url): url is string => typeof url === 'string' && url.trim().length > 0)
+
     const finalImagesCount = existingImages.length + images.length
     if (finalImagesCount > MAX_IMAGES) {
       return NextResponse.json(
@@ -387,7 +421,7 @@ export async function PUT(
       return NextResponse.json(
         {
           success: false,
-          error: updateError.message || 'حدث خطأ أثناء تحديث الإعلان',
+          error: 'حدث خطأ أثناء تحديث الإعلان',
         },
         { status: 500 }
       )
@@ -400,13 +434,17 @@ export async function PUT(
 
       const failures = uploadResults.filter((r) => 'error' in r)
       if (failures.length > 0) {
+        const uploadedPaths = uploadResults
+          .filter((result): result is { url: string; path: string } => 'path' in result)
+          .map((result) => result.path)
+        await removeStoragePaths(uploadedPaths)
         return NextResponse.json(
           { success: false, error: 'error' in failures[0] ? failures[0].error : 'فشل رفع الصور' },
           { status: 422 }
         )
       }
 
-      const validUploads = uploadResults as { url: string }[]
+      const validUploads = uploadResults as { url: string; path: string }[]
       const finalImages = [...existingImages, ...validUploads.map((item) => item.url)]
       const coverUrl =
         finalImages[cover_index] ||
@@ -421,6 +459,7 @@ export async function PUT(
 
       if (deleteMediaError) {
         console.error('DELETE OLD MEDIA ERROR:', deleteMediaError)
+        await removeStoragePaths(validUploads.map((upload) => upload.path))
         return NextResponse.json(
           { success: false, error: 'تعذر تحديث صور الإعلان' },
           { status: 500 }
@@ -440,6 +479,7 @@ export async function PUT(
 
       if (mediaInsertError) {
         console.error('INSERT MEDIA ERROR:', mediaInsertError)
+        await removeStoragePaths(validUploads.map((upload) => upload.path))
         return NextResponse.json(
           { success: false, error: 'تم تحديث النصوص لكن فشل حفظ الصور الجديدة' },
           { status: 500 }
@@ -456,11 +496,18 @@ export async function PUT(
 
       if (coverUpdateError) {
         console.error('UPDATE COVER ERROR:', coverUpdateError)
+        await removeStoragePaths(validUploads.map((upload) => upload.path))
         return NextResponse.json(
           { success: false, error: 'تم تحديث الإعلان لكن فشل تحديث صورة الغلاف' },
           { status: 500 }
         )
       }
+
+      const removedImages = currentMediaUrls.filter((url) => !finalImages.includes(url))
+      const removedStoragePaths = removedImages
+        .map((url) => getStoragePathFromPublicUrl(url))
+        .filter((path): path is string => Boolean(path))
+      await removeStoragePaths(removedStoragePaths)
     }
 
     return NextResponse.json(
@@ -476,7 +523,7 @@ export async function PUT(
     error.message = getErrorMessage(caught)
     console.error('EDIT LISTING ERROR:', caught)
     return NextResponse.json(
-      { success: false, error: error?.message || 'خطأ في السيرفر الداخلي' },
+      { success: false, error: 'خطأ في السيرفر الداخلي' },
       { status: 500 }
     )
   }
@@ -525,7 +572,7 @@ export async function DELETE(
 
     const { data: existingListing, error: existingError } = await supabaseAdmin
       .from('listings')
-      .select('listing_id, provider_id')
+      .select('listing_id, provider_id, cover_url')
       .eq('listing_id', listingId)
       .eq('provider_id', provider_id)
       .maybeSingle()
@@ -545,6 +592,11 @@ export async function DELETE(
       )
     }
 
+    const { data: currentMediaRows } = await supabaseAdmin
+      .from('listing_media')
+      .select('url')
+      .eq('listing_id', listingId)
+
     const { error: deleteError } = await supabaseAdmin
       .from('listings')
       .delete()
@@ -559,6 +611,15 @@ export async function DELETE(
       )
     }
 
+    const storagePaths = [
+      existingListing.cover_url,
+      ...(currentMediaRows ?? []).map((row) => row.url),
+    ]
+      .filter((url): url is string => typeof url === 'string' && url.trim().length > 0)
+      .map((url) => getStoragePathFromPublicUrl(url))
+      .filter((path): path is string => Boolean(path))
+    await removeStoragePaths(storagePaths)
+
     return NextResponse.json(
       {
         success: true,
@@ -572,7 +633,7 @@ export async function DELETE(
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'خطأ في السيرفر الداخلي',
+        error: 'خطأ في السيرفر الداخلي',
       },
       { status: 500 }
     )

@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (listingError || !listing) {
-    return NextResponse.json({ error: listingError?.message ?? 'Failed to create listing' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to create listing' }, { status: 500 })
   }
 
   if (parsed.mediaUrls.length > 0) {
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
 
     const { error: mediaError } = await supabaseAdmin.from('listing_media').insert(mediaRows)
     if (mediaError) {
-      return NextResponse.json({ error: mediaError.message }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to save listing media' }, { status: 500 })
     }
   }
 

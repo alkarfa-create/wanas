@@ -1,44 +1,33 @@
 // src/lib/auth.ts
-// دوال المصادقة البسيطة
-
-export const AUTH_KEY = 'wanas_provider'
+// Non-authoritative UI helpers only. Session truth is always server cookie based.
 
 export interface ProviderUIState {
-    provider_id: string
-    display_name: string
-    phone_whatsapp: string
-    email: string | null
-    username: string | null
-    avatar_url?: string | null
+  provider_id: string
+  display_name: string
+  phone_whatsapp: string
+  email: string | null
+  username: string | null
+  avatar_url?: string | null
 }
 
 export type AuthProvider = ProviderUIState
 
-export function getUIState(): ProviderUIState | null {
-    if (typeof window === 'undefined') return null
-    try {
-        const raw = localStorage.getItem(AUTH_KEY)
-        return raw ? JSON.parse(raw) : null
-    } catch {
-        return null
-    }
-}
-
-// Security boundary is cookie session; localStorage is UI-only
 export function getAuth(): AuthProvider | null {
-    return getUIState()
+  return null
 }
 
-export function setAuth(provider: ProviderUIState) {
-    localStorage.setItem(AUTH_KEY, JSON.stringify(provider))
+export function setAuth(_provider: ProviderUIState) {
+  if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event('auth-change'))
+  }
 }
 
 export function clearAuth() {
-    localStorage.removeItem(AUTH_KEY)
+  if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event('auth-change'))
+  }
 }
 
 export function isLoggedIn(): boolean {
-    return getUIState() !== null
+  return false
 }

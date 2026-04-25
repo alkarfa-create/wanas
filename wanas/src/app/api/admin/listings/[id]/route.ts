@@ -131,7 +131,7 @@ export async function PATCH(
     .eq('listing_id', listingId)
 
   if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to update listing' }, { status: 500 })
   }
 
   const { error: deleteMediaError } = await supabaseAdmin
@@ -140,7 +140,7 @@ export async function PATCH(
     .eq('listing_id', listingId)
 
   if (deleteMediaError) {
-    return NextResponse.json({ error: deleteMediaError.message }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to refresh listing media' }, { status: 500 })
   }
 
   if (parsed.mediaUrls.length > 0) {
@@ -153,7 +153,7 @@ export async function PATCH(
 
     const { error: insertMediaError } = await supabaseAdmin.from('listing_media').insert(mediaRows)
     if (insertMediaError) {
-      return NextResponse.json({ error: insertMediaError.message }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to save listing media' }, { status: 500 })
     }
   }
 

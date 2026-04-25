@@ -3,7 +3,6 @@ import type { NextRequest } from 'next/server'
 
 const PROTECTED_PREFIXES = [
   '/add-listing',
-  '/favorites',
 ]
 
 const PROVIDER_SESSION_COOKIE = 'wanas_session'
@@ -32,6 +31,5 @@ export const config = {
   matcher: [
     '/add-listing/:path*',
     '/profile/:path*',
-    '/favorites/:path*',
   ],
 }

@@ -67,11 +67,12 @@ export default async function AdminListingsPage({
   const { data, count, error } = await query
   
   if (error) {
+    console.error('admin listings query error:', error)
     return (
       <div className="p-8 bg-red-50 text-red-900 rounded-2xl border border-red-200 mt-10 max-w-4xl mx-auto" dir="rtl">
         <h2 className="text-xl font-bold mb-4">⚠️ خطأ في الاستعلام (Database Error)</h2>
         <pre className="bg-red-100 p-4 rounded-xl text-left text-sm whitespace-pre-wrap overflow-auto" dir="ltr">
-          {JSON.stringify(error, null, 2)}
+          {'Unable to load listings'}
         </pre>
         <p className="mt-4 text-sm font-bold opacity-80">
           * إذا كان كائن الخطأ فارغاً &#123;&#125;، فقد تكون المشكلة متعلقة بصلاحيات RLS أو في متغيرات البيئة.

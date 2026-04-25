@@ -42,7 +42,7 @@ export default function NotFound() {
                         style={{ backgroundColor: '#f63659' }}>
                         العودة للرئيسية
                     </Link>
-                    <Link href="/?category=chalets"
+                    <Link href="/jeddah/chalets"
                         className="w-full py-3.5 rounded-2xl font-black text-gray-700 text-sm bg-gray-50 hover:bg-gray-100 transition-all">
                         تصفح الشاليهات 🏊
                     </Link>
