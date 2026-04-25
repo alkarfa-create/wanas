@@ -5,6 +5,16 @@ import CategoryHighlight from "@/components/ui/CategoryHighlight"
 import FilterBar from "@/components/ui/FilterBar"
 import { getCategories } from "@/lib/data/categories"
 
+function normalizeSort(
+  sort?: string
+): "rank" | "price_min" | "price_max_desc" | "views_count" | "created_at" {
+  if (sort === "newest") return "created_at"
+  if (sort === "price_asc") return "price_min"
+  if (sort === "price_desc") return "price_max_desc"
+  if (sort === "views_count") return "views_count"
+  return "rank"
+}
+
 export default async function HomePage({
   searchParams,
 }: {
@@ -47,7 +57,7 @@ export default async function HomePage({
     hasPool: p.pool === "1",
     hasKitchen: p.kitchen === "1",
     capacityMin: p.capacity ? parseInt(p.capacity, 10) : undefined,
-    sortBy: (p.sort as "rank" | "price_min" | "views_count" | "created_at") || "rank",
+    sortBy: normalizeSort(p.sort),
     limit: 20,
   })
 

@@ -160,7 +160,7 @@ export default async function ListingPage({ params }: PageProps) {
     typeof (provider as any)?.phone_whatsapp === 'string'
       ? (provider as any).phone_whatsapp.replace(/\D/g, '')
       : null
-  const whatsappHref = providerPhone ? `https://wa.me/${providerPhone}` : null
+  const whatsappHref = providerPhone ? `/go/${listing.listing_id}` : null
 
   // ✅ features هي مصفوفة نصوص ["مسبح صغير", "مطبخ", ...]
   const features: string[] = Array.isArray(listing.features) ? listing.features as string[] : []

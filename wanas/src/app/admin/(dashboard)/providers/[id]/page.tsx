@@ -3,12 +3,21 @@ import { supabaseAdmin } from '@/lib/supabase'
 import Link from 'next/link'
 import Image from 'next/image'
 import { revalidatePath } from 'next/cache'
-import AdminProRequestBanner from '@/components/admin/AdminProRequestBanner'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { ADMIN_COOKIE, verifyAdminToken } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
 async function updateProviderSettings(formData: FormData) {
   'use server'
+  const cookieStore = await cookies()
+  const adminToken = cookieStore.get(ADMIN_COOKIE)?.value
+
+  if (!adminToken || !verifyAdminToken(adminToken)) {
+    redirect('/admin/login')
+  }
+
   const providerId = formData.get('provider_id') as string
   const subscriptionTier = formData.get('subscription_tier') as string
   const verificationStatus = formData.get('verification_status') as string
@@ -76,8 +85,6 @@ export default async function ProviderSettingsPage({ params }: { params: Promise
       </div>
       
       {/* 🚀 شريط التنبيه بوجود طلب PRO معلق */}
-      <AdminProRequestBanner providerId={resolvedParams.id} />
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* بطاقة المزود */}
         <div className="md:col-span-1 space-y-6">

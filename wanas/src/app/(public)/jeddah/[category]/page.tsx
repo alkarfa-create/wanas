@@ -51,7 +51,6 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
                         <div className="text-center py-32 bg-white/40 backdrop-blur-xl rounded-3xl border border-white shadow-sm">
                             <div className="text-8xl mb-6 animate-pulse opacity-50">{cat.icon}</div>
                             <p className="text-gray-600 font-black text-xl">لا توجد إعلانات متاحة حالياً</p>
-                            <button className="mt-4 text-blue-600 font-bold hover:underline">أبلغني عند توفر جديد</button>
                         </div>
                     ) : (
                         // Grid مطور مع تأثير Cascade

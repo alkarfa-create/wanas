@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { cookies } from 'next/headers'
 import { verifyProviderToken, PROVIDER_COOKIE } from '@/lib/session'
+import { isProviderSessionAllowed } from '@/lib/provider-status'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 const MAX_FILE_SIZE = 10 * 1024 * 1024
@@ -148,11 +149,11 @@ export async function POST(request: NextRequest) {
     // ── التحقق من المزود ──────────────────────────────────────
     const { data: provider } = await supabaseAdmin
       .from('providers')
-      .select('provider_id')
+      .select('provider_id, status')
       .eq('provider_id', provider_id)
       .single()
 
-    if (!provider) {
+    if (!provider || !isProviderSessionAllowed(provider.status)) {
       return NextResponse.json({ success: false, error: 'مزود غير موجود' }, { status: 401 })
     }
 

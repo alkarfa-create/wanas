@@ -24,7 +24,6 @@ interface Listing {
   price_min: number | null
   price_label: string | null
   views_count: number
-  clicks_count: number
   created_at: string
   cover_url?: string | null
   category: { name_ar: string; icon_key: string } | null
@@ -32,7 +31,6 @@ interface Listing {
 
 interface Stats {
   totalViews: number
-  totalClicks: number
   activeListings: number
   totalListings: number
 }
@@ -224,7 +222,6 @@ export default function ProfileClient({
           <StatCard label="إجمالي الإعلانات" value={stats.totalListings} />
           <StatCard label="الإعلانات النشطة" value={stats.activeListings} />
           <StatCard label="المشاهدات" value={stats.totalViews} />
-          <StatCard label="النقرات" value={stats.totalClicks} />
         </div>
 
         <div className="rounded-3xl border border-gray-100 bg-white p-5 shadow-sm">
@@ -257,7 +254,6 @@ export default function ProfileClient({
                       </p>
                       <div className="mt-3 flex flex-wrap items-center justify-end gap-3 text-xs font-bold text-gray-500">
                         <span>{listing.views_count.toLocaleString('ar-SA')} مشاهدة</span>
-                        <span>{listing.clicks_count.toLocaleString('ar-SA')} نقرة</span>
                         {listing.price_min ? <span>{listing.price_min.toLocaleString('ar-SA')} ر.س</span> : null}
                       </div>
                     </div>
@@ -278,7 +274,7 @@ export default function ProfileClient({
                       عرض
                     </Link>
                     <Link
-                      href={`/add-listing?id=${listing.listing_id}`}
+                      href={`/add-listing?edit=${listing.listing_id}`}
                       className="rounded-xl bg-gray-900 px-3 py-2 text-xs font-black text-white hover:bg-black"
                     >
                       تعديل

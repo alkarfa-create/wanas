@@ -12,7 +12,7 @@ export interface ListingParams {
   hasPool?: boolean
   hasKitchen?: boolean
   features?: string[]
-  sortBy?: 'rank' | 'price_min' | 'views_count' | 'created_at'
+  sortBy?: 'rank' | 'price_min' | 'price_max_desc' | 'views_count' | 'created_at'
   page?: number
   limit?: number
 }
@@ -36,10 +36,6 @@ function isListingDistrictRow(value: unknown): value is ListingDistrictRow {
     typeof row.name_ar === 'string' &&
     typeof row.slug === 'string'
   )
-}
-
-type ListingReviewRow = {
-  rating: number | null
 }
 
 export async function getListingsWithMedia(params: ListingParams = {}) {
@@ -129,6 +125,8 @@ export async function getListingsWithMedia(params: ListingParams = {}) {
 
   if (sortBy === 'price_min') {
     query = query.order('price_min', { ascending: true, nullsFirst: false })
+  } else if (sortBy === 'price_max_desc') {
+    query = query.order('price_max', { ascending: false, nullsFirst: false })
   } else if (sortBy === 'views_count') {
     query = query.order('views_count', { ascending: false })
   } else if (sortBy === 'created_at') {
@@ -193,29 +191,3 @@ export async function getDistrictCounts(categoryId?: number) {
   return [...map.values()].sort((a, b) => b.count - a.count)
 }
 
-export async function getHomePageStats() {
-  const [listingsResult, requestsResult, reviewsResult] = await Promise.all([
-    supabaseAdmin
-      .from('listings')
-      .select('listing_id', { count: 'exact', head: true })
-      .eq('status', 'approved'),
-    supabaseAdmin
-      .from('requests')
-      .select('request_id', { count: 'exact', head: true }),
-    supabaseAdmin
-      .from('reviews')
-      .select('rating'),
-  ])
-
-  const totalListings = listingsResult.count ?? 0
-  const totalContacts = requestsResult.count ?? 0
-
-  const reviews = (reviewsResult.data ?? []) as ListingReviewRow[]
-  const avgRating = reviews.length > 0
-    ? (
-        reviews.reduce((sum, review) => sum + (review.rating ?? 0), 0) / reviews.length
-      ).toFixed(1)
-    : '4.9'
-
-  return { totalListings, totalContacts, avgRating }
-}

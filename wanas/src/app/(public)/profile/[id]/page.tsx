@@ -26,7 +26,6 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
       price_label,
       cover_url,
       views_count,
-      clicks_count,
       created_at,
       category:service_categories(name_ar, icon_key)
     `)
@@ -37,7 +36,6 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
 
   const stats = {
     totalViews: listings.reduce((sum, listing) => sum + (listing.views_count ?? 0), 0),
-    totalClicks: listings.reduce((sum, listing) => sum + (listing.clicks_count ?? 0), 0),
     activeListings: listings.filter((listing) => listing.status === 'approved').length,
     totalListings: listings.length,
   }

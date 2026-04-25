@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 
 import { supabaseAdmin } from '@/lib/supabase'
 import { PROVIDER_COOKIE, verifyProviderToken } from '@/lib/session'
+import { isProviderSessionAllowed } from '@/lib/provider-status'
 
 export async function GET() {
   const cookieStore = await cookies()
@@ -24,7 +25,7 @@ export async function GET() {
     .eq('provider_id', providerId)
     .single()
 
-  if (error || !provider || provider.status === 'suspended' || provider.status === 'deactivated') {
+  if (error || !provider || !isProviderSessionAllowed(provider.status)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

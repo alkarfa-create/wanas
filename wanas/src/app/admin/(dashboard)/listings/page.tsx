@@ -54,7 +54,7 @@ export default async function AdminListingsPage({
     .from('listings')
     .select(`
       listing_id, title, status, price_min, is_featured,
-      views_count, clicks_count, created_at, district_name, cover_url,
+      views_count, created_at, district_name, cover_url,
       category:service_categories(name_ar, icon_key),
       provider:providers(display_name, phone_whatsapp, subscription_tier)
     `, { count: 'exact' })
@@ -164,8 +164,8 @@ export default async function AdminListingsPage({
                     </td>
                     <td className="px-4 py-4">
                       <p className="text-xs font-black text-gray-800">{l.provider?.display_name ?? '—'}</p>
-                      {l.provider?.subscription_tier === 'vip' && (
-                        <span className="text-[9px] font-black text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-full">VIP</span>
+                      {l.provider?.subscription_tier === 'pro' && (
+                        <span className="text-[9px] font-black text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-full">PRO</span>
                       )}
                     </td>
                     <td className="px-4 py-4">
@@ -175,7 +175,6 @@ export default async function AdminListingsPage({
                     </td>
                     <td className="px-4 py-4">
                       <p className="text-[10px] text-gray-500 font-bold">👁 {l.views_count ?? 0}</p>
-                      <p className="text-[10px] text-gray-500 font-bold">👆 {l.clicks_count ?? 0}</p>
                     </td>
                     <td className="px-4 py-4">
                       <p className="text-[10px] text-gray-400 font-bold">

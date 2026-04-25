@@ -13,7 +13,6 @@ type ListingSummary = {
   created_at: string | null
   district_name: string | null
   views_count: number | null
-  clicks_count: number | null
 }
 
 type ProviderSummary = {
@@ -29,7 +28,7 @@ async function getDashboardData() {
   const [listingsAll, providersAll, modEvents, pendingListings] = await Promise.all([
     supabaseAdmin
       .from('listings')
-      .select('listing_id, title, status, is_featured, created_at, district_name, views_count, clicks_count'),
+      .select('listing_id, title, status, is_featured, created_at, district_name, views_count'),
     supabaseAdmin
       .from('providers')
       .select('provider_id, subscription_tier, created_at'),
@@ -57,8 +56,6 @@ async function getDashboardData() {
   const newProviders = providers.filter((provider) => !!provider.created_at && provider.created_at >= weekAgo)
   const proProviders = providers.filter((provider) => provider.subscription_tier === 'pro')
   const totalViews = listings.reduce((sum, listing) => sum + (listing.views_count ?? 0), 0)
-  const totalClicks = listings.reduce((sum, listing) => sum + (listing.clicks_count ?? 0), 0)
-  const clickRate = totalViews > 0 ? `${((totalClicks / totalViews) * 100).toFixed(1)}%` : '0%'
   const avgViewsPerApproved =
     approvedAll.length > 0
       ? Math.round(
@@ -82,8 +79,6 @@ async function getDashboardData() {
       newProviders: newProviders.length,
       todayListings: todayListings.length,
       totalViews,
-      totalClicks,
-      clickRate,
       avgViewsPerApproved,
     },
     pendingListings: pendingListings.data ?? [],
@@ -222,8 +217,6 @@ export default async function AdminDashboardPage() {
         <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-gray-300">مؤشرات سوقية</p>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KpiCard icon="👁" label="إجمالي المشاهدات" value={kpi.totalViews} color="#3b82f6" />
-          <KpiCard icon="👆" label="إجمالي النقرات" value={kpi.totalClicks} color="#f63659" />
-          <KpiCard icon="📈" label="معدل التفاعل" value={kpi.clickRate} color="#f59e0b" sub="نقرات ÷ مشاهدات" />
           <KpiCard icon="📋" label="متوسط مشاهدات/معتمد" value={kpi.avgViewsPerApproved} color="#8b5cf6" />
         </div>
       </div>
@@ -375,7 +368,7 @@ export default async function AdminDashboardPage() {
                   <div className="flex items-center gap-3">
                     <span className="w-4 text-xs font-black text-gray-300">#{index + 1}</span>
                     <div>
-                      <p className="text-[10px] font-bold text-gray-500">👁 {listing.views_count ?? 0} · 👆 {listing.clicks_count ?? 0}</p>
+                      <p className="text-[10px] font-bold text-gray-500">👁 {listing.views_count ?? 0}</p>
                     </div>
                   </div>
                   <p className="max-w-[200px] line-clamp-1 text-right text-xs font-black text-gray-900">{listing.title}</p>

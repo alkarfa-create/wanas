@@ -1,9 +1,11 @@
 // src/app/api/auth/login/route.ts
 
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
 import { createHash } from 'crypto'
+
+import { supabaseAdmin } from '@/lib/supabase'
 import { signProviderToken, PROVIDER_COOKIE, COOKIE_OPTIONS } from '@/lib/session'
+import { isProviderSessionAllowed } from '@/lib/provider-status'
 
 function hashPassword(password: string): string {
   return createHash('sha256')
@@ -44,15 +46,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'البيانات غير صحيحة' }, { status: 401 })
     }
 
-    // Block suspended/deactivated accounts
-    if (provider.status === 'suspended' || provider.status === 'deactivated') {
-      return NextResponse.json({ error: 'الحساب موقوف أو معطّل' }, { status: 403 })
+    if (!isProviderSessionAllowed(provider.status)) {
+      return NextResponse.json({ error: 'الحساب موقوف أو محذوف' }, { status: 403 })
     }
 
     const { password_hash, ...safeProvider } = provider
 
-    // ── Set HTTP-only session cookie ──────────────────────────────────────────
-    const token    = signProviderToken(safeProvider.provider_id)
+    const token = signProviderToken(safeProvider.provider_id)
     const response = NextResponse.json({ success: true, provider: safeProvider })
     response.cookies.set(PROVIDER_COOKIE, token, COOKIE_OPTIONS)
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { cookies } from 'next/headers'
 import { verifyProviderToken, PROVIDER_COOKIE } from '@/lib/session'
+import { isProviderSessionAllowed } from '@/lib/provider-status'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 const MAX_FILE_SIZE = 10 * 1024 * 1024
@@ -115,6 +116,32 @@ export async function PUT(
       )
     }
 
+    const { data: sessionProvider } = await supabaseAdmin
+      .from('providers')
+      .select('provider_id, status')
+      .eq('provider_id', provider_id_from_session)
+      .single()
+
+    if (!sessionProvider || !isProviderSessionAllowed(sessionProvider.status)) {
+      return NextResponse.json(
+        { success: false, error: 'ÙŠØ¬Ø¨ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø£ÙˆÙ„Ø§Ù‹' },
+        { status: 401 }
+      )
+    }
+
+    const { data: providerBeforeParams } = await supabaseAdmin
+      .from('providers')
+      .select('provider_id, status')
+      .eq('provider_id', provider_id_from_session)
+      .single()
+
+    if (!providerBeforeParams || !isProviderSessionAllowed(providerBeforeParams.status)) {
+      return NextResponse.json(
+        { success: false, error: 'ÙŠØ¬Ø¨ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø£ÙˆÙ„Ø§Ù‹' },
+        { status: 401 }
+      )
+    }
+
     const { id } = await params
     const listingId = id?.trim()
 
@@ -128,7 +155,33 @@ export async function PUT(
     const formData = await request.formData()
 
     // provider_id comes from verified session cookie, not FormData
-    const provider_id = provider_id_from_session
+    const { data: providerForWrite } = await supabaseAdmin
+      .from('providers')
+      .select('provider_id, status')
+      .eq('provider_id', provider_id_from_session)
+      .single()
+
+    if (!providerForWrite || !isProviderSessionAllowed(providerForWrite.status)) {
+      return NextResponse.json(
+        { success: false, error: 'ÙŠØ¬Ø¨ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø£ÙˆÙ„Ø§Ù‹' },
+        { status: 401 }
+      )
+    }
+
+    const { data: deleteProvider } = await supabaseAdmin
+      .from('providers')
+      .select('provider_id, status')
+      .eq('provider_id', provider_id_from_session)
+      .single()
+
+    if (!deleteProvider || !isProviderSessionAllowed(deleteProvider.status)) {
+      return NextResponse.json(
+        { success: false, error: 'ÙŠØ¬Ø¨ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø£ÙˆÙ„Ø§Ù‹' },
+        { status: 401 }
+      )
+    }
+
+    const provider_id_for_write = provider_id_from_session
     const title = (formData.get('title') as string)?.trim()
     const description = (formData.get('description') as string)?.trim()
     const category_id = (formData.get('category_id') as string)?.trim()
@@ -236,11 +289,24 @@ export async function PUT(
       existingImages = []
     }
 
+    const { data: deleteProviderGuard } = await supabaseAdmin
+      .from('providers')
+      .select('provider_id, status')
+      .eq('provider_id', provider_id_from_session)
+      .single()
+
+    if (!deleteProviderGuard || !isProviderSessionAllowed(deleteProviderGuard.status)) {
+      return NextResponse.json(
+        { success: false, error: 'ÙŠØ¬Ø¨ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø£ÙˆÙ„Ø§Ù‹' },
+        { status: 401 }
+      )
+    }
+
     const { data: existingListing, error: existingError } = await supabaseAdmin
       .from('listings')
       .select('listing_id, provider_id, cover_url')
       .eq('listing_id', listingId)
-      .eq('provider_id', provider_id)
+      .eq('provider_id', provider_id_for_write)
       .maybeSingle()
 
     if (existingError) {
@@ -314,7 +380,7 @@ export async function PUT(
       .from('listings')
       .update(updatePayload)
       .eq('listing_id', listingId)
-      .eq('provider_id', provider_id)
+      .eq('provider_id', provider_id_for_write)
 
     if (updateError) {
       console.error('UPDATE LISTING ERROR:', updateError)
@@ -439,6 +505,19 @@ export async function DELETE(
       return NextResponse.json(
         { success: false, error: 'معرف الإعلان مفقود' },
         { status: 400 }
+      )
+    }
+
+    const { data: deleteProvider } = await supabaseAdmin
+      .from('providers')
+      .select('provider_id, status')
+      .eq('provider_id', provider_id_from_session)
+      .single()
+
+    if (!deleteProvider || !isProviderSessionAllowed(deleteProvider.status)) {
+      return NextResponse.json(
+        { success: false, error: 'ÙŠØ¬Ø¨ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø£ÙˆÙ„Ø§Ù‹' },
+        { status: 401 }
       )
     }
 

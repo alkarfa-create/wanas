@@ -2,8 +2,10 @@
 import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+
 import { supabaseAdmin } from '@/lib/supabase'
 import { PROVIDER_COOKIE, verifyProviderToken } from '@/lib/session'
+import { isProviderSessionAllowed } from '@/lib/provider-status'
 import AddListingForm from './AddListingForm'
 import type { ListingEditData } from './AddListingForm'
 
@@ -25,11 +27,15 @@ export default async function AddListingPage({ searchParams }: PageProps) {
 
   const { data: providerData } = await supabaseAdmin
     .from('providers')
-    .select('district_id')
+    .select('district_id, status')
     .eq('provider_id', providerId)
     .single()
 
-  const districtId = providerData?.district_id ?? 1
+  if (!providerData || !isProviderSessionAllowed(providerData.status)) {
+    redirect('/login?redirect=/add-listing')
+  }
+
+  const districtId = providerData.district_id ?? 1
 
   let existingListing: { listing_id: string; title: string; status: string } | null = null
   let editData: ListingEditData | null = null
@@ -82,20 +88,24 @@ export default async function AddListingPage({ searchParams }: PageProps) {
           </div>
           <h1 className="text-xl font-black text-gray-900 mb-2">لديك إعلان بالفعل!</h1>
           <p className="text-sm text-gray-500 font-medium mb-6 leading-relaxed">
-            كل مزود خدمة مسموح له بإعلان واحد فقط حالياً.
+            كل مزود خدمة مسموح له بإعلان واحد فقط حاليًا.
           </p>
           <div className={`border rounded-2xl p-4 mb-6 text-right ${s.bg}`}>
             <p className="text-sm font-black text-gray-900 mb-1">{existingListing.title}</p>
             <span className={`text-xs font-black ${s.color}`}>● {s.label}</span>
           </div>
           <div className="flex flex-col gap-3">
-            <Link href={`/add-listing?edit=${existingListing.listing_id}`}
+            <Link
+              href={`/add-listing?edit=${existingListing.listing_id}`}
               className="w-full py-3 rounded-2xl font-black text-white text-sm text-center"
-              style={{ backgroundColor: '#f63659' }}>
+              style={{ backgroundColor: '#f63659' }}
+            >
               ✏️ تعديل إعلاني
             </Link>
-            <Link href={`/listing/${existingListing.listing_id}`}
-              className="w-full py-3 rounded-2xl font-black text-gray-700 text-sm text-center bg-gray-50 border border-gray-200">
+            <Link
+              href={`/listing/${existingListing.listing_id}`}
+              className="w-full py-3 rounded-2xl font-black text-gray-700 text-sm text-center bg-gray-50 border border-gray-200"
+            >
               👁 عرض الإعلان
             </Link>
           </div>
