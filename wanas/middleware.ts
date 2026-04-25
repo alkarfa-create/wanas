@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const PROTECTED_ROUTES = [
+const PROTECTED_PREFIXES = [
   '/add-listing',
-  '/profile',
   '/favorites',
 ]
 
@@ -12,7 +11,9 @@ const PROVIDER_SESSION_COOKIE = 'wanas_session'
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  const isProtected = PROTECTED_ROUTES.some((route) => pathname.startsWith(route))
+  const isProtected =
+    pathname === '/profile' ||
+    PROTECTED_PREFIXES.some((route) => pathname.startsWith(route))
 
   if (!isProtected) return NextResponse.next()
 
